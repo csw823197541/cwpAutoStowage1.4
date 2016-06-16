@@ -102,12 +102,11 @@ public class CwpResultInfoTransform {
                 CwpResultInfo cwpResultInfo = valueMap.get(tKey);
                 cwpResultInfo.setMOVETYPE(null);
                 cwpResultInfo.setLDULD(null);
-//                cwpResultInfo.setREALWORKINGSTARTTIME(null);
                 cwpResultInfo.setCraneSeq(seq++);
 
                 //添加作业绝对时间
                 int workTimeMinute = cwpResultInfo.getWorkTimeMinute();
-                Date startTime = cwpResultInfo.getWorkingStartTime();
+                Date startTime = cwpResultInfo.getCraneWorkStartTime();
                 Date endTime = new Date(startTime.getTime() + workTimeMinute*60*1000);
                 cwpResultInfo.setWorkingEndTime(endTime);
                 resultInfoList.add(cwpResultInfo);
