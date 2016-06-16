@@ -2,12 +2,16 @@ package importDataProcess;
 
 import importDataInfo.*;
 
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 /**
  * Created by leko on 2016/1/22.
  */
 public class PreStowageInfoProcess {
+
+    public static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     public static String getContainerString(List<ContainerInfo> containerInfoList) {
         //在场箱信息字符串
         String container="";
@@ -122,15 +126,14 @@ public class PreStowageInfoProcess {
             temp+=cwpResultMoveInfo.getCranesPosition().toString()+",";
             temp+=cwpResultMoveInfo.getHATCHBWID().toString()+",";
             temp+=cwpResultMoveInfo.getHATCHID().toString()+",";
-            temp+=cwpResultMoveInfo.getMoveOrder().toString()+",";  //开始moveOrderId
-            temp+="1,"; //moveCount
-            temp+="0,";
-//            temp+=cwpResultMoveInfo.getMoveOrder().toString()+",";
+            temp+=cwpResultMoveInfo.getMoveOrder().toString()+",";  //moveOrder
             temp+=cwpResultMoveInfo.getVESSELID().toString()+",";
             temp+=cwpResultMoveInfo.getMOVETYPE().toString()+",";
             temp+=cwpResultMoveInfo.getLDULD()+",";
-            temp+=cwpResultMoveInfo.getWORKINGENDTIME().toString()+",";
-            temp+=cwpResultMoveInfo.getWORKINGSTARTTIME().toString()+"#";
+//            temp+=cwpResultMoveInfo.getWORKINGENDTIME().toString()+",";
+//            temp+=cwpResultMoveInfo.getWORKINGSTARTTIME().toString()+"#";
+            temp+=sdf.format(cwpResultMoveInfo.getWorkingEndTime())+",";
+            temp+=sdf.format(cwpResultMoveInfo.getWorkingStartTime())+"#";
             cwpOutput+=temp;
         }
         return cwpOutput;

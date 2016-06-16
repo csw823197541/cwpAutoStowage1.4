@@ -26,8 +26,8 @@ public class CwpResultInfo implements Cloneable{
     private Integer craneSeq;//作业某个舱所有桥机的作业顺序
     private Integer hatchSeq;//某个桥机作业哪些舱的顺序
 
-    private Date workingStartTime;     //开始作业时间(Date格式)
-    private Date workingEndTime;        //结束作业时间(Date格式)
+    private Date workingStartTime;     //开始作业时间
+    private Date workingEndTime;        //结束作业时间
 
     public Date getWorkingStartTime() {
         return workingStartTime;
@@ -50,7 +50,7 @@ public class CwpResultInfo implements Cloneable{
             return null;
         }
         else{
-            return (WORKINGSTARTTIME-WORKINGENDTIME)/60;
+            return (WORKINGENDTIME-WORKINGSTARTTIME)/60;
         }
     }
 

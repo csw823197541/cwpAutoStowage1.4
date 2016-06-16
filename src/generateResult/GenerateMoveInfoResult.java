@@ -1,10 +1,6 @@
 package generateResult;
 
-import importDataInfo.AutoStowResultInfo;
-import importDataInfo.CwpResultMoveInfo;
-import importDataInfo.MoveInfo;
-import importDataInfo.PreStowageData;
-import importDataProcess.ImportData;
+import importDataInfo.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,16 +12,31 @@ import java.util.Map;
  */
 public class GenerateMoveInfoResult {
 
-    public static List<MoveInfo> getMoveInfoResult(List<CwpResultMoveInfo> cwpResultMoveInfoList, List<AutoStowResultInfo> autoStowResultInfoList){
+    public static List<MoveInfo> getMoveInfoResult(List<VoyageInfo> voyageInfoList, List<PreStowageData> preStowageDataList, List<CwpResultMoveInfo> cwpResultMoveInfoList, List<AutoStowResultInfo> autoStowResultInfoList){
         List<MoveInfo> moveInfoList = new ArrayList<>();
 
-        //Map<String,List<PreStowageData>> moveOrderRecords = ImportData.moveOrderRecords;   //根据舱和moveorder确定具体位置
-        Map<String, String[]> autoStowResult = ImportData.autoStowResult;        //自动配载结果,根据船箱位找到配载的箱子信息
+        Map<String, AutoStowResultInfo> autoStowResult = new HashMap<>();        //自动配载结果,根据船箱位找到配载的箱子信息
+        for(AutoStowResultInfo autoStowResultInfo : autoStowResultInfoList) {
+            autoStowResult.put(autoStowResultInfo.getVesselPosition(), autoStowResultInfo);
+        }
+
+        Long voyId = voyageInfoList.get(0).getVOTVOYID().longValue();
+
+        //将预配信息进行处理，根据船箱位得到卸船的箱号信息
+        Map<String, PreStowageData> preStowageDataMap = new HashMap<>();
+        for(PreStowageData preStowageData : preStowageDataList) {
+            String bayId = preStowageData.getVBYBAYID();    //倍号
+            String rowId = preStowageData.getVRWROWNO();    //排号
+            String tieId = preStowageData.getVTRTIERNO();   //层号
+            String vp = bayId + rowId + tieId;
+            if("D".equals(preStowageData.getLDULD())) {
+                if(!preStowageDataMap.containsKey(vp)) {
+                    preStowageDataMap.put(vp, preStowageData);
+                }
+            }
+        }
+
         List<CwpResultMoveInfo> cwpResultMoveInfoList1 = cwpResultMoveInfoList;  //cwp输出结果，以一个箱子为一条记录
-
-        Map<String, Integer> craneOrderMap = new HashMap<>();
-        Map<String, Integer> craneMoveOrderMap = new HashMap<>();
-
         //将数据以不同的桥机进行分组，并且按开始时间排序
         Map<String, List<CwpResultMoveInfo>> craneMap = new HashMap<>();     //桥机分组
         for(CwpResultMoveInfo cwpResultMoveInfo : cwpResultMoveInfoList1) {
@@ -41,15 +52,14 @@ public class GenerateMoveInfoResult {
             //调用排序算法，按开始时间排序
             valueList = sortByStartTime(valueList);
             int moveID = 0;
-            int lastStartTime = -1;
+            Long lastStartTime = -1L;
             for(int i = 0; i < valueList.size(); i++) {
                 CwpResultMoveInfo cwpResultMoveInfo = valueList.get(i);
-                Integer startTime = cwpResultMoveInfo.getWORKINGSTARTTIME();
+                Long startTime = cwpResultMoveInfo.getWorkingStartTime().getTime();
                 if(startTime != lastStartTime) {
                     moveID += 1;
                 }
                 String craneID = cwpResultMoveInfo.getCRANEID();    //桥机号
-                Integer endTime = cwpResultMoveInfo.getWORKINGENDTIME();
                 String LD = cwpResultMoveInfo.getLDULD();
                 String moveType = cwpResultMoveInfo.getMOVETYPE();
                 String vesselP = cwpResultMoveInfo.getVesselPosition();
@@ -62,29 +72,20 @@ public class GenerateMoveInfoResult {
                 moveInfo.setMoveId(moveID);
                 moveInfo.setMoveType(moveType);
                 moveInfo.setGkey(craneID + "@" + moveID);
-                moveInfo.setWORKINGSTARTTIME(startTime);
-                moveInfo.setWORKINGENDTIME(endTime);
                 moveInfo.setWorkingStartTime(cwpResultMoveInfo.getWorkingStartTime());
                 moveInfo.setWorkingEndTime(cwpResultMoveInfo.getWorkingEndTime());
 
-                String[] stowResult = autoStowResult.get(vesselP);
+                AutoStowResultInfo stowResult = autoStowResult.get(vesselP);
                 if(stowResult != null && "L".equals(LD)) {
-                    moveInfo.setExFromPosition(stowResult[0]);
-                    moveInfo.setUnitId(stowResult[1]);
-                    moveInfo.setUnitLength(stowResult[2]);
+                    moveInfo.setExFromPosition(stowResult.getAreaPosition());
+                    moveInfo.setUnitId(stowResult.getUnitID());
+                    moveInfo.setUnitLength(stowResult.getSize());
                 } else {    //预配位上卸船的箱号
-                    Map<String, List<PreStowageData>> stringListMap = ImportData.preStowageDataMap;
-                    if(stringListMap != null) {
-                        List<PreStowageData> preStowageDataList = stringListMap.get(vesselP);
-                        if(preStowageDataList != null) {
-                            for(PreStowageData preStowageData : preStowageDataList) {
-                                if("D".equals(preStowageData.getLDULD())) {
-                                    moveInfo.setUnitId(preStowageData.getContainerNum());
-                                }
-                            }
-                        }
-                    }
+                    PreStowageData preStowageData = preStowageDataMap.get(vesselP);
+                    moveInfo.setUnitId(preStowageData.getContainerNum());
+                    moveInfo.setUnitLength(preStowageData.getSIZE());
                 }
+                moveInfo.setVoyId(voyId);
                 moveInfoList.add(moveInfo);
                 lastStartTime = startTime;
             }
@@ -98,9 +99,11 @@ public class GenerateMoveInfoResult {
 
         for(int i = 0; i < valueList.size(); i++) {
             CwpResultMoveInfo current = valueList.get(i);
+            Long currentLongTime = current.getWorkingStartTime().getTime();
             for(int j = i; j < valueList.size(); j++) {
                 CwpResultMoveInfo min = valueList.get(j);
-                if(current.getWORKINGSTARTTIME() > min.getWORKINGSTARTTIME()) {
+                Long minLongTime = min.getWorkingStartTime().getTime();
+                if(currentLongTime > minLongTime) {
                    current = min;
                 }
             }
