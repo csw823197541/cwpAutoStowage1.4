@@ -25,32 +25,32 @@ public class GenerateAutoStowResult {
         //处理预配信息
         String preStowageStr = AutoStowInputProcess.getPreStowageJsonStr(preStowageDataList);
 
-        try {//将自动配载要用的结果写在文件里，让算法去读这个文件
-            FileUtil.writeToFile("toAutoStowJsonData/Container.txt", containerStr);
-            FileUtil.writeToFile("toAutoStowJsonData/PreStowage.txt", preStowageStr);
-            FileUtil.writeToFile("toAutoStowJsonData/ContainerArea.txt", containerAreaStr);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        try {//将自动配载要用的结果写在文件里，让算法去读这个文件
+//            FileUtil.writeToFile("toAutoStowJsonData/Container.txt", containerStr);
+//            FileUtil.writeToFile("toAutoStowJsonData/PreStowage.txt", preStowageStr);
+//            FileUtil.writeToFile("toAutoStowJsonData/ContainerArea.txt", containerAreaStr);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
         //处理cwp输出信息
         String cwpResultStr = AutoStowInputProcess.getCwpResultJsonStr(cwpResultMoveInfoList);
 
-        try {//将自动配载要用的结果写在文件里
-            FileUtil.writeToFile("toAutoStowJsonData/CwpOutput.txt", cwpResultStr);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        try {//将自动配载要用的结果写在文件里
+//            FileUtil.writeToFile("toAutoStowJsonData/CwpOutput.txt", cwpResultStr);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
 
         String autoStowStr = null;
         if (containerStr != null && containerAreaStr != null && preStowageStr != null && cwpResultStr != null) {
             //调用自动配载算法
             autoStowStr = CallAutoStow.autoStow(containerStr, containerAreaStr, preStowageStr, cwpResultStr);
 
-            try {//将自动配载要用的结果写在文件里
-                FileUtil.writeToFile("toAutoStowJsonData/autoStowResult.txt", autoStowStr);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+//            try {//将自动配载要用的结果写在文件里
+//                FileUtil.writeToFile("toAutoStowJsonData/autoStowResult.txt", autoStowStr);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
 
             System.out.println("自动配载算法返回的结果：" + autoStowStr);
             if (autoStowStr != null) {
