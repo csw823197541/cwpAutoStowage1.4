@@ -4,7 +4,7 @@ package cwp;
 public class CallCwpTest {
 
 	static {
-        System.loadLibrary("cwp_to_java4");
+        System.loadLibrary("cwp_to_java5");
     }
       
     public static native String callCwp(String str1, String str2, String str3, String str4, String str5, String str6);

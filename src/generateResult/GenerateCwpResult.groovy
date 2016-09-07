@@ -40,17 +40,48 @@ class GenerateCwpResult {
 //            e.printStackTrace()
 //        }
         //调用cwp算法
-        if(craneJsonStr != null && hatchJsonStr != null && moveJsonStr != null) {
+        if (craneJsonStr != null && hatchJsonStr != null && moveJsonStr != null) {
             String cwpResultStr = null
-            cwpResultStr = CallCwpTest.cwp(craneJsonStr, hatchJsonStr, moveJsonStr, "4", "1", "0.2") //后三个参数分别代表桥机数量、moveCount数量模值、效率缩小
+
+            try {
+                String craneSize = String.valueOf(craneInfoList.size() - 1);
+                Collections.sort(craneInfoList, new Comparator<CraneInfo>() {
+                    @Override
+                    int compare(CraneInfo o1, CraneInfo o2) {
+                        return o1.CURRENTPOSITION.compareTo(o2.CURRENTPOSITION);
+                    }
+                });
+                CraneInfo craneInfo0 = craneInfoList.get(0);
+                CraneInfo craneInfoI = craneInfoList.get(craneInfoList.size() - 1);
+                String increaseTime = String.valueOf((craneInfoI.getWORKINGTIMERANGES().get(0).getWORKSTARTTIME().time - craneInfo0.getWORKINGTIMERANGES().get(0).getWORKSTARTTIME().time) / 1000);
+                String decreaseTime = String.valueOf((craneInfoI.getWORKINGTIMERANGES().get(0).getWORKENDTIME().time - craneInfoI.getWORKINGTIMERANGES().get(0).getWORKSTARTTIME().time) / 1000);
+
+                cwpResultStr = CallCwpTest.cwp(craneJsonStr, hatchJsonStr, moveJsonStr, craneSize, increaseTime, decreaseTime);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+//            cwpResultStr = CallCwpTest.cwp(craneJsonStr, hatchJsonStr, moveJsonStr, craneSize, increaseTime, decreaseTime)
+
             System.out.println("cwp算法返回的json字符串:" + cwpResultStr);
-            if(cwpResultStr != null){
+            if (cwpResultStr != null) {
 //                try{
 //                    FileUtil.writeToFile("toCwpData/cwpResult.txt", cwpResultStr)
 //                }catch (Exception e) {
 //                    e.printStackTrace()
 //                }
-                cwpResultInfoList = CwpResultInfoProcess.getCwpResultInfo(cwpResultStr, voyageInfoList)
+                if ("The crane resources is not enough".equals(cwpResultStr)) {
+                    cwpResultInfoList = null;
+                } else {
+//                    try{
+//                        FileUtil.writeToFile("toCwpData/cwpResult.txt", cwpResultStr)
+//                    }catch (Exception e) {
+//                        e.printStackTrace()
+//                    }
+                    cwpResultInfoList = CwpResultInfoProcess.getCwpResultInfo(cwpResultStr, voyageInfoList)
+                }
+//                cwpResultInfoList = CwpResultInfoProcess.getCwpResultInfo(cwpResultStr, voyageInfoList)
             } else {
                 System.out.println("cwp算法没有返回结果！")
             }
@@ -71,7 +102,7 @@ class GenerateCwpResult {
     static List<HatchInfo> getHatchInfoList(List<VoyageInfo> voyageInfoList, List<HatchPositionInfo> hatchPositionInfoList, Map<String, Integer> moveCountQuery) {
         System.out.println("开始生成船舱信息：");
         List<HatchInfo> hatchInfoList = new ArrayList<>()
-        try{
+        try {
             HatchInfo newHatchInfo;
             Date workingStartTime = voyageInfoList.get(0).getVOTPWKSTTM();
             Date workingEndTime = voyageInfoList.get(0).getVOTPWKENTM();
@@ -116,25 +147,25 @@ class GenerateCwpResult {
 
         List<HatchPositionInfo> hatchPositionInfoList = new ArrayList<>();
 
-        try{
+        try {
             Integer startPosition = voyageInfoList.get(0).getSTARTPOSITION();//船头开始位置
 
             //计算舱开始相对于船头位置、倍位中心相对于船头位置
             List<String> hatchIdList = new ArrayList<>();
             List<String> bayWeiIdList = new ArrayList<>();
             for (VesselStructureInfo vesselStructureInfo : vesselStructureInfoList) {
-                if(!hatchIdList.contains(vesselStructureInfo.getVHTID()))
+                if (!hatchIdList.contains(vesselStructureInfo.getVHTID()))
                     hatchIdList.add(vesselStructureInfo.getVHTID())
-                if(!bayWeiIdList.contains(vesselStructureInfo.getVBYBAYID()))
+                if (!bayWeiIdList.contains(vesselStructureInfo.getVBYBAYID()))
                     bayWeiIdList.add(vesselStructureInfo.getVBYBAYID())
             }//统计倍舱位数和倍位数
 
             //统计每个舱有多少个倍
             Map<String, Set<String>> hatchBayWeiMap = new HashMap<>()
-            for(String hatchId : hatchIdList) {
+            for (String hatchId : hatchIdList) {
                 Set<String> bayWeiSet = new TreeSet<>()
                 for (VesselStructureInfo vesselStructureInfo : vesselStructureInfoList) {
-                    if(hatchId.equals(vesselStructureInfo.getVHTID())) {
+                    if (hatchId.equals(vesselStructureInfo.getVHTID())) {
                         bayWeiSet.add(vesselStructureInfo.getVBYBAYID())
                     }
                 }
@@ -151,38 +182,39 @@ class GenerateCwpResult {
             String cabBayWei = String.format("%02d", cabPosition);
             String cabHatchId = null;
             Collections.sort(hatchIdList)
-            for(int j = 0; j < hatchIdList.size(); j++) {//查找到驾驶室在哪个舱
+            for (int j = 0; j < hatchIdList.size(); j++) {//查找到驾驶室在哪个舱
                 List<String> bayWeiList = hatchBayWeiMap.get(hatchIdList.get(j)).toList()
-                if(bayWeiList.contains(cabBayWei)) {//取后面一个舱号
-                    cabHatchId = hatchIdList.get(j+1)
+                if (bayWeiList.contains(cabBayWei)) {//取后面一个舱号
+                    cabHatchId = hatchIdList.get(j + 1)
                 }
-                if(bayWeiList.size() == 2) {
-                    if(cabPosition == (Integer.valueOf(bayWeiList.get(0)) +
-                            Integer.valueOf(bayWeiList.get(1)))/2) {
-                        cabHatchId = hatchIdList.get(j+1)
+                if (bayWeiList.size() == 2) {
+                    if (cabPosition == (Integer.valueOf(bayWeiList.get(0)) +
+                            Integer.valueOf(bayWeiList.get(1))) / 2) {
+                        cabHatchId = hatchIdList.get(j + 1)
                     }
                 }
             }
 //        Double cjj = 3.28//舱间距3.28英尺
             Double cjj = 1.0//舱间距1米
             Double cabLength = 0.0;
-            for(String hatchId : hatchIdList) {
-                if(hatchId.equals(cabHatchId)) {//当前舱前面有驾驶室
+            for (String hatchId : hatchIdList) {
+                if (hatchId.equals(cabHatchId)) {//当前舱前面有驾驶室
                     cabLength = cabL + cjj
                 }
-                hatchPositionMap.put(hatchId, Double.valueOf(df.format(startPosition + cabLength + i*(length + cjj))))//假设舱间距为2米，这个数据码头还没回复我是否合理
+                hatchPositionMap.put(hatchId, Double.valueOf(df.format(startPosition + cabLength + i * (length + cjj))))
+//假设舱间距为2米，这个数据码头还没回复我是否合理
                 i++
             }
 
             //计算倍位的中心绝对位置坐标
             Map<String, Double> bayWeiPositionMap = new HashMap<>();
-            for(String hatchId : hatchIdList) {
+            for (String hatchId : hatchIdList) {
                 Set<String> bayWeiSet = hatchBayWeiMap.get(hatchId)
                 Double hatchPosition = hatchPositionMap.get(hatchId)//舱的位置
-                if(bayWeiSet.size() == 2) {//两个倍位
-                    Double position1 = hatchPosition + Double.valueOf(length)/4
-                    Double position2 = hatchPosition + 3*Double.valueOf(length)/4
-                    Double position3 = hatchPosition + Double.valueOf(length)/2
+                if (bayWeiSet.size() == 2) {//两个倍位
+                    Double position1 = hatchPosition + Double.valueOf(length) / 4
+                    Double position2 = hatchPosition + 3 * Double.valueOf(length) / 4
+                    Double position3 = hatchPosition + Double.valueOf(length) / 2
                     List<String> bayWeiList = bayWeiSet.toList()
                     String bayWei1 = bayWeiList.get(0)
                     String bayWei2 = bayWeiList.get(1)
@@ -190,12 +222,12 @@ class GenerateCwpResult {
                     bayWeiPositionMap.put(bayWei2, Double.valueOf(df.format(position2)))
                     bayWei1 = bayWei1.startsWith("0") ? bayWei1.replace("0", "") : bayWei1
                     bayWei2 = bayWei2.startsWith("0") ? bayWei2.replace("0", "") : bayWei2
-                    Integer intBayWei3 = (Integer.valueOf(bayWei1) + Integer.valueOf(bayWei2))/2
+                    Integer intBayWei3 = (Integer.valueOf(bayWei1) + Integer.valueOf(bayWei2)) / 2
                     String bayWei3 = String.format("%02d", intBayWei3);
                     bayWeiPositionMap.put(bayWei3, Double.valueOf(df.format(position3)))
                 }
-                if(bayWeiSet.size() == 1) {//一个倍位
-                    Double position = hatchPosition + Double.valueOf(length)/2
+                if (bayWeiSet.size() == 1) {//一个倍位
+                    Double position = hatchPosition + Double.valueOf(length) / 2
                     List<String> bayWeiList = bayWeiSet.toList()
                     String bayWei = bayWeiList.get(0)
                     bayWeiPositionMap.put(bayWei, Double.valueOf(df.format(position)))
@@ -227,7 +259,6 @@ class GenerateCwpResult {
             e.printStackTrace();
         }
 
-
         //为了查看船舶结构两个坐标是否正确，
 //        VesselStructureFrame vesselStructureFrame = new VesselStructureFrame(vesselStructureInfoList);
 //        vesselStructureFrame.setVisible(true);
@@ -241,53 +272,53 @@ class GenerateCwpResult {
      * @param preStowageInfoList
      * @return
      */
-    private static List<WorkMoveInfo> getWorkMoveInfoList(List<PreStowageData> preStowageDataList) throws Exception{
+    private static List<WorkMoveInfo> getWorkMoveInfoList(List<PreStowageData> preStowageDataList) throws Exception {
 
         Map<String, List<String>> moveOrderRecords = new HashMap<>();
 
         List<WorkMoveInfo> workMoveInfoList = new ArrayList<WorkMoveInfo>();
         Map<String, Double> bayPositionQuery = ImportData.bayPositionMap//存放每个的绝对中心位置,以便生成作业关信息是查找
 
-        try{
+        try {
             System.out.println("开始生成舱内作业关信息：");
             //将数据放在不同的舱位里
             List<String> hatchIdList = new ArrayList<>()//存放舱位ID
             Map<String, List<PreStowageData>> stringListMap = new HashMap<>()//放在不同的舱位的数据
-            for(PreStowageData preStowageData : preStowageDataList) {
-                if(!hatchIdList.contains(preStowageData.getVHTID())) {
+            for (PreStowageData preStowageData : preStowageDataList) {
+                if (!hatchIdList.contains(preStowageData.getVHTID())) {
                     hatchIdList.add(preStowageData.getVHTID())
                 }
             }
             Collections.sort(hatchIdList)
             println "舱位数：" + hatchIdList.size()
-            for(String str : hatchIdList) {//将数据存放在不同舱位里
+            for (String str : hatchIdList) {//将数据存放在不同舱位里
                 List<PreStowageData> dataList1 = new ArrayList<>()
-                for(PreStowageData preStowageData : preStowageDataList) {
-                    if(str.equals(preStowageData.getVHTID())) {
+                for (PreStowageData preStowageData : preStowageDataList) {
+                    if (str.equals(preStowageData.getVHTID())) {
                         dataList1.add(preStowageData)
                     }
                 }
                 stringListMap.put(str, dataList1)
             }
-            for(String hatchId : hatchIdList) {//逐舱生成舱内作业关信息
+            for (String hatchId : hatchIdList) {//逐舱生成舱内作业关信息
                 List<PreStowageData> dataList = stringListMap.get(hatchId)
                 List<Integer> orders = new ArrayList<>()//每个舱的作业序列
-                for(PreStowageData preStowageData1 : dataList) {
-                    if(!orders.contains(preStowageData1.getMOVEORDER())) {
+                for (PreStowageData preStowageData1 : dataList) {
+                    if (!orders.contains(preStowageData1.getMOVEORDER())) {
                         orders.add(preStowageData1.getMOVEORDER())
                     }
                 }
-                for(Integer order : orders) {//按舱内的序列来生成舱内作业关信息
+                for (Integer order : orders) {//按舱内的序列来生成舱内作业关信息
                     WorkMoveInfo workMoveInfo = new WorkMoveInfo()
                     List<PreStowageData> moveDataList = new ArrayList<>()
-                    for(PreStowageData preStowageData2 : dataList) {//将同一序列的数据保存下来
-                        if(order == preStowageData2.getMOVEORDER()) {
+                    for (PreStowageData preStowageData2 : dataList) {//将同一序列的数据保存下来
+                        if (order == preStowageData2.getMOVEORDER()) {
                             moveDataList.add(preStowageData2)
                         }
                     }
 //                println "是否取到相同作业序列:"+str+"-"+order+"-"+moveDataList.size()
-                    if(moveDataList.size() == 2) {//作业序列相同,可能是双箱吊或者双吊具
-                        if(moveDataList.get(0).getVRWROWNO().equals(
+                    if (moveDataList.size() == 2) {//作业序列相同,可能是双箱吊或者双吊具
+                        if (moveDataList.get(0).getVRWROWNO().equals(
                                 moveDataList.get(1).getVRWROWNO())) {//排号相同，为双箱吊
                             workMoveInfo.setCWPWORKMOVENUM(order)
                             Integer tier = Integer.valueOf(moveDataList.get(0).getVTRTIERNO());
@@ -300,19 +331,19 @@ class GenerateCwpResult {
                             //倍位中心的绝对位置
                             String bayStr0 = moveDataList.get(0).getVBYBAYID()//
                             String bayStr1 = moveDataList.get(1).getVBYBAYID()//
-                            Double d = Double.valueOf(df.format((bayPositionQuery.get(bayStr0)+bayPositionQuery.get(bayStr1))/2))
+                            Double d = Double.valueOf(df.format((bayPositionQuery.get(bayStr0) + bayPositionQuery.get(bayStr1)) / 2))
                             workMoveInfo.setHORIZONTALPOSITION(d)
 
                             //舱.作业序列.作业工艺
-                            String key = hatchId +"." + order + "." + moveDataList.get(0).getWORKFLOW()
-                            String vesselPosition1 = hatchId + "." + moveDataList.get(0).getVBYBAYID() +"." + moveDataList.get(0).getVTRTIERNO() + "." + moveDataList.get(0).getVRWROWNO()
-                            String vesselPosition2 = hatchId + "." + moveDataList.get(1).getVBYBAYID() +"." + moveDataList.get(1).getVTRTIERNO() + "." + moveDataList.get(1).getVRWROWNO()
+                            String key = hatchId + "." + order + "." + moveDataList.get(0).getWORKFLOW()
+                            String vesselPosition1 = hatchId + "." + moveDataList.get(0).getVBYBAYID() + "." + moveDataList.get(0).getVTRTIERNO() + "." + moveDataList.get(0).getVRWROWNO()
+                            String vesselPosition2 = hatchId + "." + moveDataList.get(1).getVBYBAYID() + "." + moveDataList.get(1).getVTRTIERNO() + "." + moveDataList.get(1).getVRWROWNO()
                             List<String> positionList = new ArrayList<>()
                             positionList.add(vesselPosition1)
                             positionList.add(vesselPosition2)
                             moveOrderRecords.put(key, positionList)
                         }
-                        if(moveDataList.get(0).getVBYBAYID().equals(
+                        if (moveDataList.get(0).getVBYBAYID().equals(
                                 moveDataList.get(1).getVBYBAYID())) {//倍位号相同，为双吊具
                             workMoveInfo.setCWPWORKMOVENUM(order)
                             Integer tier = Integer.valueOf(moveDataList.get(0).getVTRTIERNO());
@@ -328,9 +359,9 @@ class GenerateCwpResult {
                             workMoveInfo.setHORIZONTALPOSITION(d)
 
                             //舱.作业序列.作业工艺
-                            String key = hatchId +"." + order + "." + moveDataList.get(0).getWORKFLOW()
-                            String vesselPosition1 = hatchId + "." + moveDataList.get(0).getVBYBAYID() +"." + moveDataList.get(0).getVTRTIERNO() + "." + moveDataList.get(0).getVRWROWNO()
-                            String vesselPosition2 = hatchId + "." + moveDataList.get(1).getVBYBAYID() +"." + moveDataList.get(1).getVTRTIERNO() + "." + moveDataList.get(1).getVRWROWNO()
+                            String key = hatchId + "." + order + "." + moveDataList.get(0).getWORKFLOW()
+                            String vesselPosition1 = hatchId + "." + moveDataList.get(0).getVBYBAYID() + "." + moveDataList.get(0).getVTRTIERNO() + "." + moveDataList.get(0).getVRWROWNO()
+                            String vesselPosition2 = hatchId + "." + moveDataList.get(1).getVBYBAYID() + "." + moveDataList.get(1).getVTRTIERNO() + "." + moveDataList.get(1).getVRWROWNO()
                             List<String> positionList = new ArrayList<>()
                             positionList.add(vesselPosition1)
                             positionList.add(vesselPosition2)
@@ -351,8 +382,8 @@ class GenerateCwpResult {
                         workMoveInfo.setHORIZONTALPOSITION(d)
 
                         //舱.作业序列.作业工艺
-                        String key = hatchId +"." + order + "." + moveDataList.get(0).getWORKFLOW()
-                        String vesselPosition1 = hatchId + "." + moveDataList.get(0).getVBYBAYID() +"." + moveDataList.get(0).getVTRTIERNO() + "." + moveDataList.get(0).getVRWROWNO()
+                        String key = hatchId + "." + order + "." + moveDataList.get(0).getWORKFLOW()
+                        String vesselPosition1 = hatchId + "." + moveDataList.get(0).getVBYBAYID() + "." + moveDataList.get(0).getVTRTIERNO() + "." + moveDataList.get(0).getVRWROWNO()
                         List<String> positionList = new ArrayList<>()
                         positionList.add(vesselPosition1)
                         moveOrderRecords.put(key, positionList)
